@@ -1,0 +1,116 @@
+{
+  "name": "Get retailer cashback",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "f6d6ed0c-aab1-4916-83ab-7b2851838aad",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "72165164-c4e9-4138-b0d2-39f457912f1b",
+      "name": "Request for getting the retailer cashback",
+      "webhookId": "f6d6ed0c-aab1-4916-83ab-7b2851838aad"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "retailer",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json[\"retailer_name\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        496,
+        0
+      ],
+      "id": "b1e0ecf5-2ea7-4f60-a2eb-39f4d7b2c597",
+      "name": "get retailer cashback"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "retailer_name = items[0][\"json\"][\"query\"][\"retailer_name\"]\n\nreturn [\n    {\n        \"json\": {\n            \"retailer_name\": retailer_name\n        }\n    }\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "2060b0d7-b59c-494a-ba7f-4e8f23efe368",
+      "name": "map retailer name from the request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        704,
+        0
+      ],
+      "id": "41d3c674-fd53-4e3a-988c-26176d40cbb8",
+      "name": "response with retailer cashback"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Request for getting the retailer cashback": {
+      "main": [
+        [
+          {
+            "node": "map retailer name from the request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get retailer cashback": {
+      "main": [
+        [
+          {
+            "node": "response with retailer cashback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "map retailer name from the request": {
+      "main": [
+        [
+          {
+            "node": "get retailer cashback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fa617f19-2f36-4505-a2b6-64800bbf716b",
+  "meta": {
+    "instanceId": "75bb49162f7ca8dda68d0922705a9650ccbf6d97d0243e0df758d8f0529b870e"
+  },
+  "id": "AZgbeGXivkL70IaC",
+  "tags": []
+}
