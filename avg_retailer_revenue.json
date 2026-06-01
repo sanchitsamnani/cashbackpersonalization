@@ -1,0 +1,130 @@
+{
+  "name": "Calculate average retailer revenue",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e16f23e3-bffa-4fdc-891c-d04137a13105",
+      "name": "Trigger retailer revenue calculation"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "retailer",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "8492fdcf-1381-49bd-a809-6751451853a4",
+      "name": "get retailer data"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import random\n\nreturn [\n    {\n        \"json\": {\n            \"name\": u.json[\"name\"],\n            \"average_monthly_revenue\": random.randrange(10000, 100000)\n        }\n    }\n    for u in items\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        0
+      ],
+      "id": "2d412b17-d4ea-4767-86cd-2e0deb93e661",
+      "name": "Map retailer data for update"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "retailer",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ $json.name }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "average_monthly_revenue",
+              "fieldValue": "={{ $json.average_monthly_revenue }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        560,
+        0
+      ],
+      "id": "0bd199aa-69e8-4bdf-851a-e34dbf62f85e",
+      "name": "Update retailer revenue"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger retailer revenue calculation": {
+      "main": [
+        [
+          {
+            "node": "get retailer data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get retailer data": {
+      "main": [
+        [
+          {
+            "node": "Map retailer data for update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map retailer data for update": {
+      "main": [
+        [
+          {
+            "node": "Update retailer revenue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "62289cf6-dfdb-458d-9685-89d8e7e9f126",
+  "meta": {
+    "instanceId": "75bb49162f7ca8dda68d0922705a9650ccbf6d97d0243e0df758d8f0529b870e"
+  },
+  "id": "cnj8LgGoj8mC1tmc",
+  "tags": []
+}
