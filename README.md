@@ -1,5 +1,5 @@
 # cashbackpersonalization
-AI based personalized cashback in iGraal and Shoop using RAG based targeting, and continuous eval loops
+AI based personalized cashback in iGraal and Shoop using RAG based targeting, and continuous eval loops.
 This repository contains a collection of n8n workflows used to power personalized cashback offers for two of Europe's leading cashback platforms, iGraal and Shoop.
 
 The workflows leverage AI and business rules to dynamically adjust cashback rates at the individual user level. Personalization decisions are based on three primary inputs:
