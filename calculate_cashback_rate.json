@@ -1,0 +1,503 @@
+{
+  "name": "Calculate cashback rate",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "retailer",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        176
+      ],
+      "id": "43fa8126-4416-4037-bf57-689a97fea49b",
+      "name": "get retailer data"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "atolls",
+          "mode": "list",
+          "cachedResultName": "atolls"
+        },
+        "limit": 1,
+        "sort": {
+          "values": [
+            {
+              "column": "created_at",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b9602a24-1494-4638-b43b-f759a4824c98",
+      "name": "get recent cashback budget"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    *\nFROM (\n    SELECT\n        *,\n        ROW_NUMBER() OVER (\n            PARTITION BY retailer_name, name\n            ORDER BY created_at DESC\n        ) AS rn\n    FROM competitor\n) t\nWHERE rn = 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        368
+      ],
+      "id": "c85f5645-fd2e-4443-826d-4eb1d5693ad4",
+      "name": "get most recent cashback for retailer per competitor"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "average_revenue = items[0].json[\"average_revenue\"]\nrevenue_decrease_tolerance_percentage = items[0].json[\"revenue_decrease_tolerance_percentage\"]\nretailer_list = list(map(lambda clean_item: clean_item.json, items[1:]))\nreturn {\"average_revenue\": average_revenue, \"revenue_decrease_tolerance_percentage\": revenue_decrease_tolerance_percentage, \"retailer_list\": retailer_list}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        80
+      ],
+      "id": "d414ecd7-de4b-431b-a0fb-807c1999833f",
+      "name": "Map budget and retailer cashback"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "atolls_cashback = items[0].json\ncompetitor_cashback_list = items[1:]\ncompetitor_cashback_list = list(map(lambda clean_item: clean_item.json, items[1:]))\nreturn {\"atolls_cashback\": atolls_cashback, \"competitor_cashback_list\": competitor_cashback_list}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        224
+      ],
+      "id": "649b3a3c-0d91-44a3-a108-73953c9208df",
+      "name": "Map atolls retailer cashback with latest competitor cashback"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        304,
+        80
+      ],
+      "id": "9eae0cf3-43a6-406a-8779-b3b62a0144a3",
+      "name": "Merge cashback budget with the retailer elements"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "retailer",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "condition": "eq",
+              "keyValue": "={{ $json.retailer_name }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "outgoing_commision_percentage",
+              "fieldValue": "={{ $json.updated_cashback_commission }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        208
+      ],
+      "id": "8753b14b-24a5-4d74-80f5-f32541f33f7d",
+      "name": "Update retailer cashback"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "updates = items[0][\"json\"][\"output\"][0][\"content\"][0][\"text\"][\"cashback_updates\"]\n\nreturn [\n    {\n        \"json\": {\n            \"retailer_name\": u[\"retailer_name\"],\n            \"cashback_rate\": u[\"updated_cashback_commission\"]\n        }\n    }\n    for u in updates\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        208
+      ],
+      "id": "a980b356-0e54-47dc-a2f6-3fe9267fd6d6",
+      "name": "Map retailer cashback rates for update"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -272,
+        176
+      ],
+      "id": "18f9a461-9b05-4130-9c62-0bcc5a5163c8",
+      "name": "Trigger cashback rate updates"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "competitor",
+        "returnAll": true,
+        "filterType": "none"
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        400
+      ],
+      "id": "ce8505ae-6b5b-4b4a-adf4-9289a8319ae9",
+      "name": "get competitor cashback history"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        224
+      ],
+      "id": "b1eb52b4-59ee-4d61-9348-b8b189beb279",
+      "name": "Merge the cashback commissions"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.2",
+          "mode": "list",
+          "cachedResultName": "GPT-5.2"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "={{ $json.prediction_commission_system_prompt.content }}"
+            },
+            {
+              "content": "={{ $json.prediction_commission_user_prompt.content }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxToolsIterations": 1,
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema",
+              "verbosity": "high",
+              "name": "cashback_schema",
+              "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"cashback_updates\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"retailer_name\": {\n            \"type\": \"string\"\n          },\n          \"updated_cashback_commission\": {\n            \"type\": \"number\"\n          }\n        },\n        \"additionalProperties\": false,\n        \"required\": [\"retailer_name\", \"updated_cashback_commission\"]\n      }\n    }\n  },\n  \"additionalProperties\": false,\n  \"required\": [\"cashback_updates\"]\n}",
+              "strict": true
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        2080,
+        208
+      ],
+      "id": "53d3d663-252e-47f0-9ed7-85cbeabe3701",
+      "name": "predict cashback commission"
+    },
+    {
+      "parameters": {
+        "promptName": "predict-commission",
+        "label": "best",
+        "requestOptions": {}
+      },
+      "type": "@langfuse/n8n-nodes-langfuse.langfuse",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        96
+      ],
+      "id": "c715e3b1-41d3-4033-9ac0-b4ad8c33eacf",
+      "name": "get predict commission prompt"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1616,
+        208
+      ],
+      "id": "7bdf73d3-f001-47d8-9980-ebece41fea05",
+      "name": "merge predict commission prompt with data"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "chat_prompt = items[0].json\nsystem_prompt = chat_prompt.prompt[0]\nuser_prompt = chat_prompt.prompt[1]\nreturn {\"prediction_commission_system_prompt\": system_prompt, \"prediction_commission_user_prompt\": user_prompt}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        96
+      ],
+      "id": "8dd1917b-6c2a-4db1-8a7c-a48c3df1a59a",
+      "name": "map prediction commission prompt"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\nprediction_commission_user_prompt = _input.first().json.prediction_commission_user_prompt\ncashback_data = {\"atolls_cashback\": _input.first().json.atolls_cashback, \"competitor_cashback_list\": _input.first().json.competitor_cashback_list}\nprediction_commission_user_prompt.content = prediction_commission_user_prompt.content.replace(\"{{cashback_data}}\", json.dumps(cashback_data))\nreturn {\"prediction_commission_system_prompt\": _input.first().json.prediction_commission_system_prompt, \"prediction_commission_user_prompt\": cashback_data}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        16
+      ],
+      "id": "9021d6c8-5292-4fd2-9cbc-20ac5bd1154a",
+      "name": "populate prompt template"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst systemPrompt = input.prediction_commission_system_prompt;\nconst userPrompt = input.prediction_commission_user_prompt;\nconst atollsCashback = input.atolls_cashback;\nconst competitorList = input.competitor_cashback_list;\n\nconst cashbackData = {\n  atolls_cashback: atollsCashback,\n  competitor_cashback_list: competitorList\n};\n\nconst cashbackDataString = JSON.stringify(cashbackData, null, 2);\n\nconst updatedUserContent = userPrompt.content.replace(\n  \"{{cashback_data}}\",\n  cashbackDataString\n);\n\nreturn [\n  {\n    json: {\n      prediction_commission_system_prompt: systemPrompt,\n      prediction_commission_user_prompt: {\n        ...userPrompt,\n        content: updatedUserContent\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        208
+      ],
+      "id": "58250a85-a68a-4fc7-9b00-8aa6d776ccd5",
+      "name": "populate prompt template js"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "get most recent cashback for retailer per competitor": {
+      "main": [
+        [
+          {
+            "node": "Merge the cashback commissions",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "get retailer data": {
+      "main": [
+        [
+          {
+            "node": "Merge cashback budget with the retailer elements",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "get recent cashback budget": {
+      "main": [
+        [
+          {
+            "node": "Merge cashback budget with the retailer elements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map budget and retailer cashback": {
+      "main": [
+        [
+          {
+            "node": "Merge the cashback commissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge cashback budget with the retailer elements": {
+      "main": [
+        [
+          {
+            "node": "Map budget and retailer cashback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map atolls retailer cashback with latest competitor cashback": {
+      "main": [
+        [
+          {
+            "node": "get predict commission prompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "merge predict commission prompt with data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Map retailer cashback rates for update": {
+      "main": [
+        [
+          {
+            "node": "Update retailer cashback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger cashback rate updates": {
+      "main": [
+        [
+          {
+            "node": "get retailer data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get recent cashback budget",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get most recent cashback for retailer per competitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get competitor cashback history": {
+      "ai_tool": [
+        [
+          {
+            "node": "predict cashback commission",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge the cashback commissions": {
+      "main": [
+        [
+          {
+            "node": "Map atolls retailer cashback with latest competitor cashback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "predict cashback commission": {
+      "main": [
+        [
+          {
+            "node": "Map retailer cashback rates for update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get predict commission prompt": {
+      "main": [
+        [
+          {
+            "node": "map prediction commission prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "merge predict commission prompt with data": {
+      "main": [
+        [
+          {
+            "node": "populate prompt template js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "map prediction commission prompt": {
+      "main": [
+        [
+          {
+            "node": "merge predict commission prompt with data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "populate prompt template js": {
+      "main": [
+        [
+          {
+            "node": "predict cashback commission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "721d9f34-f81a-4248-8d16-5c512b9b77c4",
+  "meta": {
+    "instanceId": "75bb49162f7ca8dda68d0922705a9650ccbf6d97d0243e0df758d8f0529b870e"
+  },
+  "id": "9Y52GIhgKMqF47C0",
+  "tags": []
+}
