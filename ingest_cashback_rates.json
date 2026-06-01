@@ -1,0 +1,384 @@
+{
+  "name": "Ingest cashback rates",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1168,
+        176
+      ],
+      "id": "dae4b86a-3f78-42bd-989a-509f8944e4a2",
+      "name": "Trigger Cahsback search"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "return {\"chatInput\": _input.first().json.prompt}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        176
+      ],
+      "id": "51b4bec7-5b36-4272-8146-f80f7125c246",
+      "name": "user query"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema",
+              "name": "extract_schema",
+              "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"results\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"commission_percentage\": {\n            \"type\": \"number\"\n          },\n          \"competitor\": {\n            \"type\": \"string\"\n          },\n          \"retailer\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"commission_percentage\", \"competitor\", \"retailer\"],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\"results\"],\n  \"additionalProperties\": false\n}"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        368
+      ],
+      "id": "68f95910-7427-47f6-a1f6-e897d4bb3e9a",
+      "name": "OpenAI Chat Model extractor"
+    },
+    {
+      "parameters": {
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "You are a web searcher for the current cashback commission."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -416,
+        176
+      ],
+      "id": "9713fd90-f2e7-4694-aa8c-7f32e8165f4a",
+      "name": "Web search agent",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-search-api",
+          "mode": "list",
+          "cachedResultName": "gpt-5-search-api"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        400
+      ],
+      "id": "3e7defae-ffb5-4664-988a-69b10456bebd",
+      "name": "OpenAI Chat Model web search"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-search-preview",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-search-preview"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        400
+      ],
+      "id": "ffcbb5e0-9eeb-4983-9948-e02954400e44",
+      "name": "OpenAI Chat Model web search fallback"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"results\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"commission_percentage\": {\n            \"type\": \"number\"\n          },\n          \"competitor\": {\n            \"type\": \"string\"\n          },\n          \"retailer\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"commission_percentage\", \"competitor\", \"retailer\"],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\"results\"],\n  \"additionalProperties\": false\n}",
+        "options": {
+          "systemPromptTemplate": "={{ $json.prompt }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        160
+      ],
+      "id": "3d964ec4-fac5-482f-8e3a-05c5a25aecec",
+      "name": "Searched Information extractor"
+    },
+    {
+      "parameters": {
+        "tableId": "competitor",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.competitor }}"
+            },
+            {
+              "fieldId": "retailer_name",
+              "fieldValue": "={{ $json.retailer }}"
+            },
+            {
+              "fieldId": "commission_percentage",
+              "fieldValue": "={{ $json.commission_percentage }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        960,
+        160
+      ],
+      "id": "5439a8a8-85d0-4c4a-a1c0-2c13424ee3b4",
+      "name": "add cashback rate"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        784,
+        160
+      ],
+      "id": "b2042f57-43a4-4594-ade9-e5ef8045757a",
+      "name": "list map"
+    },
+    {
+      "parameters": {
+        "promptName": "cashback-websearch",
+        "label": "best",
+        "requestOptions": {}
+      },
+      "type": "@langfuse/n8n-nodes-langfuse.langfuse",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        176
+      ],
+      "id": "f4ed1325-b55b-4fdc-a3fc-cf71e1055b69",
+      "name": "get websearch prompt"
+    },
+    {
+      "parameters": {
+        "promptName": "cashback-search-extract",
+        "label": "best",
+        "requestOptions": {}
+      },
+      "type": "@langfuse/n8n-nodes-langfuse.langfuse",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bbe13f5e-0775-4f5c-b77e-94c6ddb1df31",
+      "name": "get search extraction prompt"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        256,
+        160
+      ],
+      "id": "4fb04cfe-444c-4186-b97d-4a3a07c49042",
+      "name": "merge search extract prompt and websearch output"
+    }
+  ],
+  "pinData": {
+    "Trigger Cahsback search": [
+      {
+        "json": {
+          "timestamp": "2026-02-05T00:00:00.000-00:00",
+          "Readable date": "February 5th 2026, 0:00:00 am",
+          "Readable time": "0:00:00 am",
+          "Day of week": "Thursday",
+          "Year": "2026",
+          "Month": "February",
+          "Day of month": "05",
+          "Hour": "00",
+          "Minute": "10",
+          "Second": "00",
+          "Timezone": "Europe/Berlin (UTC-01:00)"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Trigger Cahsback search": {
+      "main": [
+        [
+          {
+            "node": "get websearch prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "user query": {
+      "main": [
+        [
+          {
+            "node": "Web search agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model extractor": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Searched Information extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web search agent": {
+      "main": [
+        [
+          {
+            "node": "get search extraction prompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "merge search extract prompt and websearch output",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model web search": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Web search agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model web search fallback": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Web search agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Searched Information extractor": {
+      "main": [
+        [
+          {
+            "node": "list map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list map": {
+      "main": [
+        [
+          {
+            "node": "add cashback rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get websearch prompt": {
+      "main": [
+        [
+          {
+            "node": "user query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get search extraction prompt": {
+      "main": [
+        [
+          {
+            "node": "merge search extract prompt and websearch output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "merge search extract prompt and websearch output": {
+      "main": [
+        [
+          {
+            "node": "Searched Information extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f8e80980-e511-460d-894b-d63203998be4",
+  "meta": {
+    "instanceId": "75bb49162f7ca8dda68d0922705a9650ccbf6d97d0243e0df758d8f0529b870e"
+  },
+  "id": "h6PgLShX9SaHAFuO",
+  "tags": []
+}
